@@ -1,0 +1,84 @@
+#ifdef VS 
+ 
+precision highp float;
+
+attribute vec3 position;
+attribute vec3 normal;
+
+uniform mat3 normalMatrix;
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+uniform float time;
+
+varying vec3 vNormal;
+varying vec3 vPosition;
+
+vec3 rotateVector(vec3 vec, float angle) {
+    float cosA = cos(angle);
+    float sinA = sin(angle);
+    return vec3(cosA * vec.x - sinA * vec.y, sinA * vec.x + cosA * vec.y, vec.z);
+}
+
+vec3 scaleVector(vec3 vec, float scale) {
+    return scale * vec;
+}
+
+void main() {
+    float rotationSpeed = 10.0;
+    float scalingSpeed = 6.0;
+    float scaleFactor = 1.2;
+    float rotationFactor = 2.0;
+
+    vec3 scaledPosition = scaleVector(position, scaleFactor * abs(sin(scalingSpeed * time) + 0.3));
+    vec3 rotatedPosition = rotateVector(scaledPosition, rotationFactor * sin(time * rotationSpeed));
+
+    vNormal = normalize(normalMatrix * normal);
+    vec4 worldPosition = modelViewMatrix * vec4(rotatedPosition, 1.0);
+    gl_Position = projectionMatrix * worldPosition;
+    vPosition = gl_Position.xyz / gl_Position.w;
+}
+
+ 
+#else 
+ 
+precision highp float;
+
+varying vec3 vNormal;
+varying vec3 vPosition;
+
+uniform float time;
+
+vec3 calculateLightDirection(vec3 lightPosition) {
+    return normalize(lightPosition - vPosition);
+}
+
+float calculateLighting(vec3 normal, vec3 lightDir, float intensity, float diffuseStrength, float specularStrength, float shininess) {
+    float ndotl = max(dot(normal, lightDir), 0.0);
+    vec3 reflectDir = reflect(-lightDir, normal);
+    vec3 viewDir = normalize(-vPosition);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+    return intensity * (diffuseStrength * ndotl + specularStrength * spec);
+}
+
+void main() {
+    vec3 lightPos1 = vec3(0.5, 1.0, 0.0);
+    vec3 lightPos2 = vec3(-0.5, 1.0, 0.0);
+    vec3 normalizedNormal = normalize(vNormal);
+
+    float redComponent = abs(sin(3.0 * time));
+    float greenComponent = abs(sin(2.0 * time));
+    float blueComponent = abs(sin(1.5 * time));
+    vec3 baseColor = vec3(redComponent, greenComponent, blueComponent);
+
+    vec3 lightDir1 = calculateLightDirection(lightPos1);
+    vec3 lightDir2 = calculateLightDirection(lightPos2);
+
+    float lightIntensity1 = calculateLighting(normalizedNormal, lightDir1, 0.5, 0.7, 0.3, 32.0);
+    float lightIntensity2 = calculateLighting(normalizedNormal, lightDir2, 0.3, 0.6, 0.4, 16.0);
+
+    vec3 finalColor = (lightIntensity1 + lightIntensity2) * baseColor;
+    gl_FragColor = vec4(finalColor, 1.0);
+}
+
+ 
+#endif
