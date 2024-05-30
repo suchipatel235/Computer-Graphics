@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Interactive 3D Cube - Homework 6</title>
+    <meta name="description" content="3D Cube Visualization using WebGL">
+    <meta name="author" content="Suchi Patel">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgb(239, 195, 240); 
+        }
+        #myCanvas { 
+            border: 1px solid rgb(196, 111, 6);  
+  
+        }
+        h1 {
+            margin-bottom: 20px; 
+            font-family: 'Arial', sans-serif;
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #5e5a5a; 
+            text-align: center; 
+            margin-bottom: 20px;
+
+        }
+        .slider-container {
+            margin-top: 20px; 
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive 3D Cube Visualization</h1>
+    <canvas id="myCanvas" width="700" height="700"></canvas>
+    <div class="slider-container">
+        <label>Light Intensity: <input id="slider1" type="range" min="0.0" max="100" /></label><br>
+        <label>Rotation Angle: <input id="slider2" type="range" min="0" max="100" /></label><br>
+        <label>Animation Speed: <input id="slider3" type="range" min="0" max="100" /></label>
+    </div>
+    <script id="vertexShader" type="not-js">
+        precision highp float;
+        attribute vec3 vPosition;
+        attribute vec3 vColor;
+        attribute vec3 vNormal;
+        attribute vec2 vTexCoord;
+        varying vec2 fTexCoord;
+        varying vec3 fPosition;
+        varying vec3 fColor;
+        varying vec3 fNormal;
+        varying vec3 light2;
+        uniform vec3 rawLight;
+        uniform mat3 uMVn;
+        uniform mat4 uMV; 
+        uniform mat4 uMVP;
+
+        void main(void) {
+            vec4 tempPos = uMV * vec4(vPosition, 1.0);
+            fPosition = tempPos.xyz;
+            gl_Position = uMVP * vec4(vPosition, 1.0);
+            fColor = vColor.xyz;
+            fNormal = uMVn * vNormal;
+            light2 = rawLight.xyz;
+            fTexCoord = vTexCoord;
+        }
+    </script>
+
+    <script id="fragmentShader" type="not-js">
+        precision highp float;
+        varying vec3 fPosition;
+        varying vec3 fColor;
+        varying vec3 fNormal;
+        varying vec2 fTexCoord;
+        varying vec3 light2;
+        uniform sampler2D uDiffuseTexture;
+        uniform sampler2D uSpecularTexture;
+        const vec3 light1 = vec3(0, 0, 0);
+        const vec3 ColorLight1 = vec3(1.0, 1.0, 1.0);
+        const vec3 ColorLight2 = vec3(1.0, .6, 0);
+        
+        vec2 phongLightModel(vec3 light, float Ka, float Kd, float Ks, float specExp) {
+            vec3 N= normalize(fNormal);
+            vec3 L = normalize(light);
+            vec3 E = normalize(-fPosition);
+            vec3 H = normalize(L+E);
+            float diffuse = Ka + Kd * max(dot(L, N), 0.0);
+            float spec = Ks * pow(max(dot(H, N), 0.0), specExp);
+            return vec2(diffuse, spec); 
+        }
+
+        void main(void) {
+            vec3 texColor = texture2D(uSpecularTexture,fTexCoord).xyz;
+            vec3 ColorAD = phongLightModel(light2, 0.0, 0.9, 0.2, 0.0).x * ColorLight1 * texColor;
+            vec3 ColorS = phongLightModel(light2, 0.5, 0.5, 0.8, 16.0).y * ColorLight2;
+            gl_FragColor = vec4(ColorAD + ColorS, 1.0);
+        }
+    </script>
+    <script src="gl-matrix-min.js"></script>
+    <script src="p7.js"></script>
+</body>
+</html>
+
+
+
+
